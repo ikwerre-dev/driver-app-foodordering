@@ -63,7 +63,7 @@ function TabNavigator() {
       backgroundColor: isDarkTheme ? "#1A1A1A" : "#FFFFFF",
       borderTopWidth: 1,
       borderTopColor: isDarkTheme ? "#333333" : "#E5E7EB",
-      height:  Platform.OS === "android" ? insets.bottom + 90 : 90,
+      height:  60,
       paddingTop:  6,
       paddingHorizontal: 16,
       shadowColor: "#000",
@@ -76,6 +76,7 @@ function TabNavigator() {
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: Platform.OS === "android" ? 10 : 0,
+      objectFit: 'contain'
     },
     tabBarBadge: {
       backgroundColor: "#DC2626",

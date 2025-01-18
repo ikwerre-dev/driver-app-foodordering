@@ -11,6 +11,7 @@ import CallNotification from "./components/CallNotification";
 import IncomingNotification from "./components/IncomingNotification";
 
 import "react-native-gesture-handler";
+import { SocketProvider } from "./context/SocketContext";
 
 Sentry.init({
   dsn: "https://b5924853cd92384acf0a66476507c67e@o4508121170116608.ingest.us.sentry.io/4508482143911936",
@@ -38,8 +39,16 @@ export default function App() {
 
 function MainNavigator() {
   const { user } = React.useContext(AuthContext);
-  return user ? <AppStack /> : <AuthStack />;
+  
+  return user ? (
+    <SocketProvider>
+      <AppStack />
+    </SocketProvider>
+  ) : (
+    <AuthStack />
+  );
 }
+
 
 function FallbackComponent() {
   return "Something went wrong. Please restart the app. ";

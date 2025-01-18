@@ -7,11 +7,35 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker'
+import jwt_decode from 'jwt-decode'
+import { BASE_URL } from '../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DriverRegistration({ navigation }) {
   const [activeTab, setActiveTab] = useState('private');
+  const [frontsidebase64, setFrontSideBase64] = useState(null)
+  const [loading, setloading] = useState(false)
+  const [isModalVisible, setIsModalVisible] = useState(false); // To manage modal visibility
+  const [selectedOption, setSelectedOption] = useState(null); // To store selected value
+
+  const [backsidebase64, setBackSideBase64] = useState(null)
+  const [error, seterror] = useState("")
+  const [success, setsuccess] = useState("")
+  const dropdownItems = [
+    { label: 'Driver', value: 'driver' },
+    { label: 'Rider', value: 'Rider' }
+  ];
+  const toggleModal = () => setIsModalVisible(!isModalVisible);
+  const handleSelectOption = (option) => {
+    setSelectedOption(option); // Update selected option
+    setIsModalVisible(false);  // Close modal after selection
+  };
   const [formData, setFormData] = useState({
     joinAs: '',
     firstName: '',
@@ -20,8 +44,131 @@ export default function DriverRegistration({ navigation }) {
     licenseNumber: '',
     issueDate: '',
     expiryDate: '',
-    aadharNumber: '',
+    aadharNumber: ''
   });
+
+  const handleDateChange2 = (text, type) => {
+    // Allow only digits and slashes
+    let formattedText = text.replace(/[^0-9\/]/g, ''); // Remove anything that is not a number or slash
+  
+    // Automatically insert slashes when the user reaches two digits for day/month
+    if (formattedText.length === 2 || formattedText.length === 5) {
+      formattedText = formattedText + '/';
+    }
+  
+    // Limit the length to 10 characters (DD/MM/YYYY)
+    if (formattedText.length <= 10) {
+      setFormData((prevFormData) => ({
+        ...prevFormData,
+        [type]: formattedText, // Dynamically update issueDate or expiryDate based on the type
+      }));
+    }
+  };
+  
+  const handleDateChange = (text, type) => {
+    // Allow only digits and slashes
+    let formattedText = text.replace(/[^0-9\/]/g, ''); // Remove anything that is not a number or slash
+  
+    // Automatically insert slashes when the user reaches two digits for day/month
+    if (formattedText.length === 2 || formattedText.length === 5) {
+      formattedText = formattedText + '/';
+    }
+  
+    // Limit the length to 10 characters (DD/MM/YYYY)
+    if (formattedText.length <= 10) {
+      setFormData((prevFormData) => ({
+        ...prevFormData,
+        [type]: formattedText, // Dynamically update issueDate or expiryDate based on the type
+      }));
+    }
+  };
+  
+  // Function to convert DD/MM/YYYY to YYYY-MM-DD
+  const formatDate = (date) => {
+    const [day, month, year] = date.split('/');
+    return `${year}-${month}-${day}`;
+  };
+
+  const uploadDocs = async () => {
+    setloading(true)
+    try {
+      if (!formData.licenseNumber || !formData.issueDate || !formData.expiryDate || !formData.aadharNumber || !frontsidebase64 || !backsidebase64) {
+        Alert.alert('Validation Error', 'Please fill in all required fields and upload both sides of the card.');
+        return; // Stop further execution if validation fails
+      }
+      const token = await AsyncStorage.getItem("token")
+      const decodedToken = await jwt_decode(token)
+      const {id, email} = decodedToken
+      const response = await fetch(`${BASE_URL}/upload_documents`, {
+        method: "POST",
+        body: JSON.stringify({
+          driver_id: id,
+          driving_license_number: formData.licenseNumber,
+          issue_date: formatDate(formData.issueDate),
+          expiry_date: formatDate(formData.expiryDate),
+          aadhar_card_number: formData.aadharNumber,
+          front_side_card_base64: frontsidebase64,
+          back_side_card_base64: backsidebase64
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+
+      if (!response.ok){
+        console.log("Error occurred: ", response)
+        console.log("main: ", await response.json())
+        return
+      }
+
+      const resp2 = await response.json()
+      console.log("Resp2: ", resp2)
+      if (resp2.status === 201){
+        console.log("resp2: ", resp2)
+        setsuccess("Driver Details sent for verification")
+      } else{
+        console.log("Omo: ", resp2)
+        seterror("Error sending driver details")
+      }
+
+    } catch (error) {
+      console.error("Error: ", error)
+      seterror("Error sending driver details")
+    } finally{
+      setloading(false)
+    }
+  }
+
+  const pickImage = async (side) => {
+    // Launch the image picker with the specified options
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], // Only allow images
+      allowsEditing: true,  // Allow editing
+      aspect: [4, 3],      // Aspect ratio
+      quality: 1,          // Image quality
+      base64: true
+    });
+
+    console.log("result: ", result)
+
+    if (!result.canceled) {
+      console.log("Not canceled")
+      // Convert the image to base64
+      const base64 = result.assets[0].base64;
+      console.log("base: ", base64)
+      // Set the base64 string based on the side of the card
+      if (side === 'front') {
+        setFrontSideBase64(base64);
+      } else if (side === 'back') {
+        setBackSideBase64(base64);
+      }
+    }
+  };
+
+  
+
+
+  
 
   const renderPrivateInfo = () => (
     <View style={styles.formContainer}>
@@ -34,10 +181,32 @@ export default function DriverRegistration({ navigation }) {
         <Text style={styles.label}>
           I want to join Tiva as: <Text style={styles.required}>*</Text>
         </Text>
-        <TouchableOpacity style={styles.dropdown}>
-          <Text style={styles.dropdownText}>Select option</Text>
+        <TouchableOpacity style={styles.dropdown} onPress={toggleModal}>
+          {selectedOption !== null ? (
+            <Text style={styles.dropdownText}>{selectedOption.value}</Text>
+          ) : (
+            <Text style={styles.dropdownText}>Select option</Text>
+          )}
           <Feather name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
+        <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+        <TouchableOpacity style={styles.modalBackground} onPress={toggleModal}>
+          <View style={styles.modalContainer}>
+            <FlatList
+              data={dropdownItems}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.option}
+                  onPress={() => handleSelectOption(item)}
+                >
+                  <Text style={styles.optionText}>{item.label}</Text>
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.value}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
       </View>
 
       <View style={styles.inputGroup}>
@@ -71,8 +240,14 @@ export default function DriverRegistration({ navigation }) {
           Gender <Text style={styles.required}>*</Text>
         </Text>
         <TouchableOpacity style={styles.dropdown}>
-          <Text style={styles.dropdownText}>Select gender</Text>
-          <Feather name="chevron-down" size={20} color="#666" />
+        <TextInput
+  style={{ color: 'white', fontFamily: "Livvic_700Bold", fontSize: 16}}
+  placeholder='Type Gender'
+  placeholderTextColor='white'
+  value={formData.gender}
+  onChangeText={(text) => setFormData({ ...formData, gender: text })}
+/>
+          <Feather name="chevron-left" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -114,20 +289,28 @@ export default function DriverRegistration({ navigation }) {
           <Text style={styles.label}>
             Issue Date <Text style={styles.required}>*</Text>
           </Text>
-          <TouchableOpacity style={styles.dateInput}>
-            <Text style={styles.dateInputText}>Select date</Text>
-            <Feather name="calendar" size={20} color="#666" />
-          </TouchableOpacity>
+          <TextInput
+            style={styles.dateInput}
+            placeholder="DD/MM/YYYY"
+            value={formData.issueDate}
+            placeholderTextColor='#666'
+            onChangeText={(text) => handleDateChange(text, 'issueDate')}
+            keyboardType="numeric" // Only numeric input for the date
+          />
         </View>
 
         <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
           <Text style={styles.label}>
             Expiry Date <Text style={styles.required}>*</Text>
           </Text>
-          <TouchableOpacity style={styles.dateInput}>
-            <Text style={styles.dateInputText}>Select date</Text>
-            <Feather name="calendar" size={20} color="#666" />
-          </TouchableOpacity>
+          <TextInput
+            style={styles.dateInput}
+            placeholder="DD/MM/YYYY"
+            value={formData.expiryDate}
+            placeholderTextColor='#666'
+            onChangeText={(text) => handleDateChange(text, 'expiryDate')}
+            keyboardType="numeric" // Only numeric input for the date
+          />
         </View>
       </View>
 
@@ -135,10 +318,16 @@ export default function DriverRegistration({ navigation }) {
         <Text style={styles.label}>
           Front Side of Card <Text style={styles.required}>*</Text>
         </Text>
-        <TouchableOpacity style={styles.uploadBox}>
-          <Feather name="upload" size={24} color="#666" />
+        <TouchableOpacity style={styles.uploadBox} onPress={() => pickImage('front')}>
+          {frontsidebase64 !== null ? (
+            <AntDesign name='checkcircle' size={23} color='red'/>
+          ) : (
+            <>
+              <Feather name="upload" size={24} color="#666" />
           <Text style={styles.uploadText}>Click to Upload Front Side of Card</Text>
           <Text style={styles.uploadSubtext}>(Max. File size: 25 MB)</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -146,10 +335,16 @@ export default function DriverRegistration({ navigation }) {
         <Text style={styles.label}>
           Back Side of Card <Text style={styles.required}>*</Text>
         </Text>
-        <TouchableOpacity style={styles.uploadBox}>
-          <Feather name="upload" size={24} color="#666" />
+        <TouchableOpacity style={styles.uploadBox} onPress={() => pickImage('back')}>
+          {backsidebase64 !== null ? (
+            <AntDesign name='checkcircle' size={23} color='red'/>
+          ) : (
+            <>
+              <Feather name="upload" size={24} color="#666" />
           <Text style={styles.uploadText}>Click to Upload Back Side of Card</Text>
           <Text style={styles.uploadSubtext}>(Max. File size: 25 MB)</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -166,8 +361,12 @@ export default function DriverRegistration({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>Done</Text>
+      <TouchableOpacity style={styles.button} disabled={loading} onPress={uploadDocs}>
+        {loading ? (
+          <ActivityIndicator color='white' size={20}/>
+        ) : (
+          <Text style={styles.buttonText}>Done</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -200,6 +399,8 @@ export default function DriverRegistration({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      {success && <Text style={{color: 'green', fontSize: 16, paddingVertical: 10}}>{success}</Text>}
+      {error && <Text style={{color: 'red', fontSize: 16, paddingVertical: 10}}>{error}</Text>}
       <ScrollView style={styles.content}>
         {activeTab === 'private' ? renderPrivateInfo() : renderDriversInfo()}
       </ScrollView>
@@ -300,7 +501,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdownText: {
-    color: '#666',
+    color: '#fff',
     fontSize: 18,
   },
   helperText: {
@@ -317,6 +518,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2A2A',
     borderRadius: 8,
     padding: 18,
+    fontSize: 18,
+    color: '#666',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -355,6 +558,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  // Modal container style
+  modalContainer: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+  },
+  option: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginVertical: 10,
+    borderRadius: 10
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: "Livvic_700Bold"
   },
 });
 

@@ -13,7 +13,9 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import jwt_decode from 'jwt-decode'
 import Icon from 'react-native-vector-icons/Feather';
 import { ThemeContext } from '../context/AuthContext';
 import {
@@ -24,6 +26,8 @@ import {
 import AppLoading from '../components/Loader';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
+import { BASE_URL } from '../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const vehicleTypes = ['Bicycle', 'Car', 'Tricycle', 'Bike'];
@@ -31,6 +35,7 @@ const vehicleTypes = ['Bicycle', 'Car', 'Tricycle', 'Bike'];
 const CarView = ({ title, imageUrl, onEdit }) => {
   const { theme } = useContext(ThemeContext);
   const styles = getStyles(theme);
+  
 
   return (
     <TouchableOpacity style={styles.carViewContainer} onPress={onEdit}>
@@ -55,6 +60,22 @@ const CarType = ({ navigation }) => {
   const [plateNumber, setPlateNumber] = useState('ABC123');
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingView, setEditingView] = useState(null);
+  const [carFront, setcarFront] = useState("")
+  const [carBack, setcarBack] = useState("")
+  const [sending, setsending] = useState(false)
+  const [carLeft, setcarLeft] = useState("")
+  const [success, setSuccess] = useState("")
+  const [error, setError] = useState("")
+  const [carRight, setcarRight] = useState("")
+  
+
+  const uploadCarImages = async () => {
+    try {
+
+    } catch (error) {
+      console.error("Error: ", error)
+    }
+  }
   const [carViews, setCarViews] = useState([
     { title: 'Front Side of Vehicle', image: 'https://via.placeholder.com/300x200.png?text=Front' },
     { title: 'Left Side of Vehicle', image: 'https://via.placeholder.com/300x200.png?text=Left' },
@@ -73,6 +94,7 @@ const CarType = ({ navigation }) => {
   }
 
   const styles = getStyles(theme);
+  
 
   const handleEditView = (index) => {
     setEditingView(index);
@@ -81,22 +103,95 @@ const CarType = ({ navigation }) => {
 
   const handleUpdateImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      base64: true
     });
 
     if (!result.canceled) {
       const updatedViews = [...carViews];
       updatedViews[editingView].image = result.assets[0].uri;
       setCarViews(updatedViews);
+      console.log("Editingview: ", editingView)
+      console.log("Base64: ", result.assets[0].base64)
+      if (editingView === 1){
+        setcarLeft(result.assets[0].base64)
+      } else if (editingView === 0){
+        setcarFront(result.assets[0].base64)
+      } else if (editingView === 2){
+        setcarRight(result.assets[0].base64)
+      } else {
+        setcarBack(result.assets[0].base64)
+      }
       setIsEditModalVisible(false);
     }
   };
 
-  const toggleEditing = () => {
-    setIsEditing(!isEditing);
+  const sendImagesUpdateNow = async () => {
+    setsending(true)
+    if (!carLeft || !carBack || !carFront || !carRight || !vehicleType || !plateNumber){
+      setError("Missing values!")
+      setIsEditing(isEditing)
+      return
+    }
+    try {
+      const token = await AsyncStorage.getItem("token")
+      const decodedToken = await jwt_decode(token)
+      const {id, email} = decodedToken
+      const response = await fetch(`${BASE_URL}/upload_driver_car`,{
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          driverLeft: carLeft,
+          driverRight: carRight,
+          driverFront: carFront,
+          driverBack: carBack,
+          driver_id: id,
+          email: email,
+          vehicle_type: vehicleType,
+          plate_number: plateNumber
+        })
+      })
+
+      if (!response.ok){
+        const errorData = await response.json()
+        console.log("Response json: ", errorData)
+        setError("Error: ", errorData.message)
+        return
+      }
+
+      const resp2 = await response.json()
+
+      if (resp2.status === 200){
+        setIsEditing(!isEditing);
+        setError("")
+        setSuccess("Vehicle Details updated successfully")
+      } else if (resp2.status === 400){
+        setError("Missing details")
+        setSuccess("")
+      } else{
+        console.log("resp2: ", resp2)
+        setSuccess("")
+        setError("Unknown error occurred")
+      }
+
+    } catch (error) {
+      console.error("Error: ", error)
+    } finally{
+      setsending(false)
+    }
+  }
+
+  const toggleEditing = async () => {
+    if (isEditing){
+      await sendImagesUpdateNow()
+    } else{
+      setIsEditing(!isEditing)
+    }
   };
 
   return (
@@ -118,9 +213,17 @@ const CarType = ({ navigation }) => {
       >
         <View style={styles.content}>
           <Text style={styles.headerTitle}>Vehicle Details</Text>
-          <TouchableOpacity onPress={toggleEditing} style={styles.editButton}>
-            <Text style={styles.editButtonText}>{isEditing ? 'Save' : 'Edit'}</Text>
+          <TouchableOpacity onPress={toggleEditing} style={styles.editButton} disabled={sending}>
+            {sending ? (
+              <ActivityIndicator color='white' size={20}/>
+            ) : (
+              <Text style={styles.editButtonText}>{isEditing ? 'Save' : 'Edit'}</Text>
+            )}
           </TouchableOpacity>
+
+          {error !== "" && <Text style={{color: 'red', fontFamily: "Livvic_700Bold", fontSize: 17}}>{error}</Text>}
+          {success !== "" && <Text style={{color: 'green', fontFamily: "Livvic_700Bold", fontSize: 17}}>{success}</Text>}
+
 
           {isEditing && (
             <>

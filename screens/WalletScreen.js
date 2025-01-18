@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import jwt_decode from 'jwt-decode'
 import { ThemeContext } from "../context/AuthContext";
 import {
   useFonts,
@@ -18,6 +19,9 @@ import {
 import AppLoading from "../components/Loader";
 import Svg, { Path } from "react-native-svg";
 import { Dimensions } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_URL } from "../config";
 const { width } = Dimensions.get("window");
 
 const ActionButton = ({ icon, title, subtitle }) => {
@@ -57,16 +61,71 @@ const DecorativeLine = () => (
   </Svg>
 );
 
-const MyAccount = ({ navigation }) => {
+const MyAccount = () => {
   const { theme } = useContext(ThemeContext);
+  const [balance, setBalance] = useState('...')
+  const [driverid, setdriverid] = useState('')
+  const [driverEmail, setdriverEmail] = useState("")
   let [fontsLoaded] = useFonts({
     Livvic_400Regular,
     Livvic_700Bold,
   });
+  useEffect(() => {
+    const getBalance = async () => {
+      try {
+        // Retrieve the token from AsyncStorage
+        const token = await AsyncStorage.getItem("token");
+        
+        if (!token) {
+          console.log("Token not found");
+          return;
+        }
+  
+        // Decode the token to extract the email
+        const decodedToken = await jwt_decode(token);
+        const { email, id } = decodedToken;
+  
+        // Set driver id and email
+        setdriverid(id);
+        setdriverEmail(email);
+  
+        // Make a request to fetch the balance
+        const response = await fetch(`${BASE_URL}/fetch_balance`, {
+          method: "POST",
+          body: JSON.stringify({ email, user_id: id }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+  
+        if (!response.ok) {
+          console.log("Failed to fetch balance");
+          return;
+        }
+  
+        // Parse the response
+        const data = await response.json();
+        if (data.status === 200) {
+          console.log("User balance: ", data.balance);
+          setBalance(data.balance);
+        } else {
+          console.log("Failed to retrieve balance: ", data.message);
+        }
+      } catch (error) {
+        console.log("Error fetching balance: ", error);
+      }
+    };
+
+    getBalance()
+  }, [])
+  const navigation = useNavigation()
 
   if (!fontsLoaded) {
     return <AppLoading />;
   }
+
+  
+
 
   const styles = getStyles(theme);
 
@@ -84,7 +143,7 @@ const MyAccount = ({ navigation }) => {
           <View style={styles.balanceCard}>
             <DecorativeLine />
             <Text style={styles.balanceLabel}>Total balance</Text>
-            <Text style={styles.balanceAmount}>N250,000.01</Text>
+            <Text style={styles.balanceAmount}>N {balance}</Text>
             <View style={styles.actionsGrid}>
               <ActionButton
                 icon="file-text"

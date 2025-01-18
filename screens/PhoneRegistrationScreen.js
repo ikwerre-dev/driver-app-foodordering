@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +8,42 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { AuthContext } from '../context/AuthContext';
 
-export default function PhoneRegistrationScreen({ navigation }) {
+export default function PhoneRegistrationScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const navigation = useNavigation()
+  const route = useRoute()
+  const {fullName, email, password} = route.params
+  const {verifyEmail} = useContext(AuthContext)
+  const [error, setError] = useState("")
+  const [loading, setloading] = useState(false)
+
+  const verifyNow = async () => {
+    try {
+      setloading(true)
+      const userData = JSON.stringify({
+        email: email
+      })
+      const main = await verifyEmail(userData)
+      const {otp, status, message} = main
+      if (status === 201){
+        navigation.navigate('VerificationCode', {email: email, password: password, fullName: fullName, otp: otp, phoneNumber: phoneNumber})
+      } else{
+        setError(message)
+      }
+
+
+    } catch (error) {
+      console.error('error: ', error)
+    } finally{
+      setloading(false)
+    }
+  }
+
 
   return (
     <KeyboardAvoidingView
@@ -28,8 +60,9 @@ export default function PhoneRegistrationScreen({ navigation }) {
       <View style={styles.content}>
         <Text style={styles.title}>Registration</Text>
         <Text style={styles.subtitle}>
-          Enter your phone number to verify your account
+          Enter your phone number
         </Text>
+        {error !== "" && <Text style={{color: 'red', fontSize: 20, paddingVertical: 10}}>{error}</Text>}
 
         <View style={styles.phoneContainer}>
           <View style={styles.countryCode}>
@@ -47,9 +80,14 @@ export default function PhoneRegistrationScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.continueButton}
-          onPress={() => navigation.navigate('VerificationCode')}
+          disabled={phoneNumber === ''}
+          onPress={verifyNow}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          {loading ? (
+            <ActivityIndicator color='white' size={20}/>
+          ) : (
+            <Text style={styles.continueButtonText}>Continue</Text>
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

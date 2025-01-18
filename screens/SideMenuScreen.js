@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
-export default function SideMenuScreen({ navigation }) {
+export default function SideMenuScreen() {
   const menuItems = [
     { icon: 'shopping-bag', title: 'My Orders' },
     { icon: 'user', title: 'My Profile' },
@@ -19,6 +19,8 @@ export default function SideMenuScreen({ navigation }) {
     { icon: 'star', title: 'Your Ratings' },
     { icon: 'log-out', title: 'Log Out' },
   ];
+  const [email, setEmail] = useState("")
+  const [fullname, setfullname] = useState("")
   
   return (
     <View style={styles.container}>

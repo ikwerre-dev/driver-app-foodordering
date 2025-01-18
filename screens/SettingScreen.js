@@ -11,6 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import jwt_decode from 'jwt-decode'
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { AuthContext, ThemeContext } from '../context/AuthContext';
 import {
   useFonts,
@@ -25,6 +28,23 @@ const { width } = Dimensions.get('window');
 const Settings = ({ navigation }) => {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { logout } = useContext(AuthContext);
+  const [token, settoken] = useState(null)
+  const [fullname, setfullname] = useState("...")
+  useEffect(() => {
+    const getDeets = async () => {
+      try {
+        const deets = await AsyncStorage.getItem("token")
+        const decodedToken = await jwt_decode(deets)
+        const fullname = decodedToken.fullname
+        console.log("fullname: ", decodedToken)
+        setfullname(fullname)
+      } catch (error) {
+        console.log("Error: ", error)
+      }
+    }
+
+    getDeets()
+  }, [])  
  
   let [fontsLoaded] = useFonts({
     Livvic_400Regular,
@@ -77,8 +97,8 @@ const Settings = ({ navigation }) => {
               style={styles.profileImage}
             />
           </View>
-          <Text style={styles.name}>Jon Snow</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Text style={styles.name}>{fullname}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile', {data: token})}>
             <Text style={styles.editProfile}>Edit Profile</Text>
           </TouchableOpacity>
 

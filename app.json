@@ -5,9 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "developmentClient": true,
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -24,9 +22,29 @@
       },
       "package": "com.codewithhonour.foodapp",
       "permissions": [
+        "android.permission.ACCESS_WIFI_STATE",
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.BLUETOOTH",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.VIBRATE",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyADUgvqdCAHwvxaJaZVJCM7D6ozWai3lQY"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -45,9 +63,8 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "634355c1-e7bc-493f-a373-f0af02fb336c"
+        "projectId": "ef294ba0-e4b8-43d4-8896-3f09e4865e66"
       }
-    },
-    "owner": "primestudio"
+    }
   }
 }

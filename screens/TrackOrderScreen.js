@@ -23,6 +23,7 @@ import { Livvic_400Regular, Livvic_700Bold } from "@expo-google-fonts/livvic";
 import AppLoading from "../components/Loader";
 import { ThemeContext } from "../context/AuthContext";
 import * as Location from "expo-location";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
@@ -218,7 +219,7 @@ const getStyles = (theme) =>
     },
   });
 
-const TrackOrderScreen = ({ navigation }) => {
+const TrackOrderScreen = () => {
   const { theme } = useContext(ThemeContext);
   const styles = getStyles(theme);
   const [isLoading, setIsLoading] = useState(false);
@@ -227,6 +228,10 @@ const TrackOrderScreen = ({ navigation }) => {
   const [shopLocation, setShopLocation] = useState(null);
   const [homeLocation, setHomeLocation] = useState(null);
   const mapRef = useRef(null);
+  const route = useRoute()
+  const navigation = useNavigation()
+  const {data} = route.params
+
 
   // Note: Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your actual Google Maps API key
   const GOOGLE_MAPS_API_KEY = "AIzaSyADUgvqdCAHwvxaJaZVJCM7D6ozWai3lQY";
@@ -301,7 +306,7 @@ const TrackOrderScreen = ({ navigation }) => {
               size={24}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>On-Going</Text>
+          <Text style={styles.headerTitle}>Past Rides</Text>
         </View>
 
         {currentLocation && shopLocation && homeLocation &&
@@ -372,7 +377,7 @@ const TrackOrderScreen = ({ navigation }) => {
                   fontFamily: "Livvic_700Bold",
                   borderRadius:10,
                   fontSize:12
-                }]}>On Going</Text>
+                }]}>{data.status}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Icon
@@ -382,7 +387,7 @@ const TrackOrderScreen = ({ navigation }) => {
                   style={styles.infoIcon}
                 />
                 <Text style={styles.infoLabel}>Customer Name</Text>
-                <Text style={styles.infoValue}>Jon Snow</Text>
+                <Text style={styles.infoValue}>{data.customer_name}</Text>
               </View>
               <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
                 <Icon
@@ -392,7 +397,7 @@ const TrackOrderScreen = ({ navigation }) => {
                   style={styles.infoIcon}
                 />
                 <Text style={styles.infoLabel}>
-                  41B Sasegbon Street, GRA, Ikeja
+                   {data.delivery_address}
                 </Text>
               </View>
             </View>

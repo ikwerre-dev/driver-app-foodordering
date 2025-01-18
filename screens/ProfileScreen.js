@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { ThemeContext } from "../context/AuthContext";
+import { useEffect, useState } from 'react'
+import jwt_decode from 'jwt-decode'
 import {
   useFonts,
   Livvic_400Regular,
@@ -22,9 +24,34 @@ import AppLoading from "../components/Loader";
 
 const { width } = Dimensions.get("window");
 import profileBanner from "../assets/profilebanner.png";
-const Profile = ({ navigation }) => {
-  const { theme } = useContext(ThemeContext);
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
+
+const Profile = () => {
+  const { theme } = useContext(ThemeContext);
+  const [fullname, setfullname] = useState("...")
+  const [email, setemail] = useState("...@gmail.com")
+  const [phone, setphone] = useState("..........")
+  const route = useRoute()
+  const navigation = useNavigation()
+  useEffect(() => {
+    const getDeets = async () => {
+      try {
+        const deets = await AsyncStorage.getItem("token")
+        const decodedToken = await jwt_decode(deets)
+        const {fullname, email, phone_number} = decodedToken
+        console.log("fullname: ", decodedToken)
+        setfullname(fullname)
+        setphone(phone_number)
+        setemail(email)
+      } catch (error) {
+        console.log("Error: ", error)
+      }
+    }
+
+    getDeets()
+  }, [])  
   let [fontsLoaded] = useFonts({
     Livvic_400Regular,
     Livvic_700Bold,
@@ -64,7 +91,7 @@ const Profile = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.name}>Robinson Honour</Text>
+          <Text style={styles.name}>{fullname}</Text>
           <Text style={styles.editProfile}>Edit Profile</Text>
 
           <View style={styles.form}>
@@ -72,7 +99,8 @@ const Profile = ({ navigation }) => {
               <Text style={styles.label}>Full name</Text>
               <TextInput
                 style={styles.input}
-                value="Robinson Honour"
+                value={fullname}
+                onChangeText={(e) => setfullname(e)}
                 placeholderTextColor={theme === "light" ? "#666" : "#888"}
               />
             </View>
@@ -81,7 +109,8 @@ const Profile = ({ navigation }) => {
               <Text style={styles.label}>E-mail</Text>
               <TextInput
                 style={styles.input}
-                value="robinsonhonour@gmail.com"
+                value={email}
+                onChangeText={(text) => setemail(text)}
                 placeholderTextColor={theme === "light" ? "#666" : "#888"}
                 keyboardType="email-address"
               />
@@ -91,7 +120,8 @@ const Profile = ({ navigation }) => {
               <Text style={styles.label}>Phone Number</Text>
               <TextInput
                 style={styles.input}
-                value="+2349163169949"
+                value={phone}
+                onChangeText={(e) => setphone(e)}
                 placeholderTextColor={theme === "light" ? "#666" : "#888"}
                 keyboardType="phone-pad"
               />

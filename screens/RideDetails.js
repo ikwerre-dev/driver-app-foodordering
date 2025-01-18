@@ -51,9 +51,9 @@ const RideDetails = ({ navigation, route }) => {
               <View style={styles.locationItem}>
                 <Icon name="map-pin" size={20} color="#4CAF50" style={styles.locationIcon} />
                 <View style={styles.timeContainer}>
-                  <Text style={styles.time}>Started: 01 Jan 2023, 11:47 AM</Text>
+                  <Text style={styles.time}>Started: {tripId.created_at}</Text>
                   <Text style={styles.address}>
-                    Bus Sta Upas, Majestic, Bengaluru, Karnataka 560009
+                    {tripId.shop_address}
                   </Text>
                 </View>
               </View>
@@ -61,9 +61,9 @@ const RideDetails = ({ navigation, route }) => {
               <View style={styles.locationItem}>
                 <Icon name="map-pin" size={20} color="#f44336" style={styles.locationIcon} />
                 <View style={styles.timeContainer}>
-                  <Text style={styles.time}>Ended: 01 Jan 2023, 01:14 PM</Text>
+                  <Text style={styles.time}>Ended: {tripId.updated_at}</Text>
                   <Text style={styles.address}>
-                    M.G. Railway Colony, Majestic, Bengaluru, Karnataka 560023
+                    {tripId.delivery_address}
                   </Text>
                 </View>
               </View>
@@ -73,24 +73,22 @@ const RideDetails = ({ navigation, route }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>TRIP DETAILS</Text>
             <View style={styles.detailsCard}>
-              <DetailRow label="Trip ID" value="#0CAC6C64" />
+              <DetailRow label="Trip ID" value={`#${tripId.id}`} />
               <DetailRow label="Trip Type" value="Round Trip" />
-              <DetailRow label="Distance" value="5.36 km" />
-              <DetailRow label="Duration" value="1h 27min" />
-              <DetailRow label="Vehicle" value="Toyota Corolla" isLast />
+              <DetailRow label="Distance" value={`${tripId.distance_calc} m`} />
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>FARE DETAILS</Text>
             <View style={styles.fareCard}>
-              <DetailRow label="Base Fare" value="₦1,200" />
-              <DetailRow label="Distance Fare" value="₦250" />
-              <DetailRow label="Time Fare" value="₦50" />
-              <DetailRow label="Total Fare" value="₦1,500" isTotal />
+              <DetailRow label="Base Fare" value={tripId.price * 0.8} />
+              <DetailRow label="Distance Fare" value={`₦ ${tripId.price * 0.15}`} />
+              <DetailRow label="Time Fare" value={`₦ ${tripId.price * 0.05}`} />
+              <DetailRow label="Total Fare" value={`₦ ${tripId.price}`} isTotal />
               <View style={styles.earnedContainer}>
                 <Text style={styles.earnedLabel}>Your Earnings</Text>
-                <Text style={styles.earnedValue}>₦250</Text>
+                <Text style={styles.earnedValue}>{`₦ ${tripId.price * 0.15}`}</Text>
               </View>
             </View>
           </View>

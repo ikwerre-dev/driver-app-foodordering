@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import jwt_decode from 'jwt-decode'
 import Icon from 'react-native-vector-icons/Feather';
 import { ThemeContext } from '../context/AuthContext';
 import {
@@ -17,8 +20,19 @@ import {
   Livvic_700Bold,
 } from '@expo-google-fonts/livvic';
 import AppLoading from '../components/Loader';
+import { BASE_URL } from '../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Entypo from '@expo/vector-icons/Entypo';
 
-const ReviewCard = ({ name, date, review, avatar }) => {
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const ReviewCard = ({ customer_name, created_at, message_from_user, rating_number }) => {
   const { theme } = useContext(ThemeContext);
   const styles = getStyles(theme);
 
@@ -26,23 +40,108 @@ const ReviewCard = ({ name, date, review, avatar }) => {
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
         <View style={styles.reviewUser}>
-          <Image source={{ uri: avatar }} style={styles.avatar} />
+          <Entypo name="user" size={24} color="black" style={styles.avatar}/>          
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{name}</Text>
-            <Text style={styles.reviewDate}>{date}</Text>
+            <Text style={styles.userName}>{customer_name}</Text>
+            <Text style={styles.reviewDate}>{formatDate(created_at)}</Text>
           </View>
         </View>
         <TouchableOpacity>
           <Icon name="more-vertical" size={20} color={theme === 'light' ? '#666' : '#888'} />
         </TouchableOpacity>
       </View>
-      <Text style={styles.reviewText}>{review}</Text>
+      <Text style={styles.reviewText}>{message_from_user}</Text>
     </View>
   );
 };
 
+
 const Performance = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
+  const [rating, setRating] = useState('');
+  const [ratings, setRatings] = useState([])
+  const [checking, setChecking] = useState(false)
+
+
+  const checkRatingsNow = async () => {
+    setChecking(true)
+    try {
+      const token = await AsyncStorage.getItem("token")
+      const decodedToken = await jwt_decode(token)
+      const {id, email} = decodedToken
+      const response = await fetch(`${BASE_URL}/ratings`, {
+        method: "POST",
+        body: JSON.stringify({
+          driver_id: id
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+
+      if (!response.ok){
+        return
+      }
+
+      const resp2 = await response.json()
+      console.log("Resp2: ", resp2)
+      if (resp2.status === 200 && resp2.ratings.length > 0){
+        setRatings(resp2.ratings)
+      } else if (resp2.status === 200 && resp2.ratings.length === 0){
+        setRatings([])
+      } else{
+        setError(resp2.message)
+      }
+    } catch (error) {
+      console.error("Error: ", error)
+    } finally{
+      setChecking(false)
+    }
+  }
+
+  useEffect(() => {
+    const checkRatingsNow2 = async () => {
+      setChecking(true)
+      try {
+        const token = await AsyncStorage.getItem("token")
+        const decodedToken = await jwt_decode(token)
+        const {id, email} = decodedToken
+        const response = await fetch(`${BASE_URL}/ratings`, {
+          method: "POST",
+          body: JSON.stringify({
+            driver_id: id
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+  
+        if (!response.ok){
+          console.log("Response: ", await response.json())
+          return
+        }
+  
+        const resp2 = await response.json()
+        console.log("Resp2: ", resp2)
+        if (resp2.status === 200 && resp2.ratings.length > 0){
+          setRatings(resp2.ratings)
+        } else if (resp2.status === 200 && resp2.ratings.length === 0){
+          setRatings([])
+        } else{
+          setError(resp2.message)
+        }
+      } catch (error) {
+        console.error("Error: ", error)
+      } finally{
+        setChecking(false)
+      }
+    }
+    const getNow = async () => {
+      await checkRatingsNow2()
+    }
+
+    getNow()
+  }, [])
 
   let [fontsLoaded] = useFonts({
     Livvic_400Regular,
@@ -55,26 +154,6 @@ const Performance = ({ navigation }) => {
 
   const styles = getStyles(theme);
 
-  const reviews = [
-    {
-      name: 'Arya Stark',
-      date: '25/06/2024',
-      review: 'Really convenient and the points system helps benefit loyalty. Some mild glitches here and there, but nothing too egregious. Obviously needs to roll out to more remote.',
-      avatar: '/placeholder.svg?height=40&width=40',
-    },
-    {
-      name: 'Tyrion Lannister',
-      date: '22/06/2024',
-      review: 'Been a life saver for keeping our sanity during the pandemic, although they could improve some of their ui and how they handle specials as it often is unclear how to use them or everything is sold out so fast it feels a bit bait and switch. Still Id be stir crazy and losing track of days without so...',
-      avatar: '/placeholder.svg?height=40&width=40',
-    },
-    {
-      name: 'Daenerys Targaryen',
-      date: '21/06/2024',
-      review: 'Got an intro offer of 50% off first order that did not work.... I have scaled the app to find a contact us button but only a spend with us button available.',
-      avatar: '/placeholder.svg?height=40&width=40',
-    },
-  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -87,10 +166,18 @@ const Performance = ({ navigation }) => {
           <Text style={styles.headerTitle}>Performance</Text>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {reviews.map((review, index) => (
-            <ReviewCard key={index} {...review} />
-          ))}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={checking} onRefresh={checkRatingsNow}/>}>
+          {checking ? (
+            <ActivityIndicator color='white' size={20} style={{alignSelf: 'center', justifyContent: 'center'}}/>
+          ) : (
+            ratings.length > 0 ? (
+              ratings.map((review, index) => (
+                <ReviewCard key={index} {...review} />
+              ))
+            ) : (
+              <Text style={{color: 'white', fontFamily: "Livvic_700Bold", fontSize: 17, textAlign: 'center'}}>No ratings found yet...</Text>
+            )
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>

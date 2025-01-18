@@ -34,7 +34,7 @@ function SignUpScreen({ navigation }) {
             placeholder="Enter your full name"
             placeholderTextColor="#666"
             value={fullName}
-            onChangeText={setFullName}
+            onChangeText={(text) => setFullName(text)}
           />
         </View>
 
@@ -45,7 +45,7 @@ function SignUpScreen({ navigation }) {
             placeholder="Enter your email"
             placeholderTextColor="#666"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => setEmail(text)}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -58,7 +58,7 @@ function SignUpScreen({ navigation }) {
             placeholder="Enter your password"
             placeholderTextColor="#666"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(pasw) => setPassword(pasw)}
             secureTextEntry={!showPassword}
           />
           <TouchableOpacity
@@ -75,7 +75,8 @@ function SignUpScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.signUpButton}
-          onPress={() => navigation.navigate('PhoneRegistration')}
+          disabled={fullName === "" || email === "" || password === ""}
+          onPress={() => navigation.navigate('PhoneRegistration', {fullName: fullName, email: email, password: password})}
         >
           <Text style={styles.signUpButtonText}>SIGN UP</Text>
         </TouchableOpacity>

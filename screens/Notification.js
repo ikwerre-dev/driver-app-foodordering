@@ -9,11 +9,15 @@ import {
   Animated,
   Dimensions,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
+import jwt_decode from 'jwt-decode'
 import Icon from 'react-native-vector-icons/Feather'; // For icons like Bell, Search, Filter, Menu, Star, etc.
 import { ThemeContext } from '../context/AuthContext';
 import { useFonts, Livvic_400Regular, Livvic_700Bold } from '@expo-google-fonts/livvic';
 import AppLoading from '../components/Loader';
+import { BASE_URL } from '../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height } = Dimensions.get('window');
 
@@ -54,6 +58,9 @@ const NotificationModal = ({ visible, notification, onClose }) => {
     }
   }, [visible]);
 
+  
+  
+
   if (!notification) return null;
 
   return (
@@ -77,9 +84,9 @@ const NotificationModal = ({ visible, notification, onClose }) => {
             </View>
 
             <ScrollView style={styles.modalScrollView}>
-              <Text style={styles.notificationTitle}>{notification.title}</Text>
-              <Text style={styles.messageText}>{notification.message}</Text>
-              <Text style={styles.modalTimestamp}>{notification.timestamp}</Text>
+              <Text style={styles.notificationTitle}>{notification.notification_title}</Text>
+              <Text style={styles.messageText}>{notification.notification_body}</Text>
+              <Text style={styles.modalTimestamp}>{notification.created_at.split(" ")[0]}.{notification.created_at.split(" ")[1]}</Text>
             </ScrollView>
 
             <TouchableOpacity style={styles.okayButton} onPress={onClose}>
@@ -96,6 +103,75 @@ const NotificationScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [success, setSuccess] = useState("")
+  const [loading, setloading] = useState(true)
+  const [error, setError] = useState("")
+  const [notificationsArray, setnotificationsArray] = useState([])
+
+  useEffect(() => {
+    const getNotificationsNow2 = async () => {
+      setloading(true)
+      try {
+        // Retrieve token from AsyncStorage
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          console.error("Token not found.");
+          return;
+        }
+    
+        // Decode the token to extract user details
+        const decodedToken = jwt_decode(token);
+        const { id, email } = decodedToken;
+    
+        // Make a GET request to fetch notifications
+        const response = await fetch(`${BASE_URL}/notifications/${id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+    
+        if (!response) {
+          setError("Error occurred")
+          console.error("No response received from the server.");
+          return;
+        }
+    
+        // Parse the response JSON
+        const resp2 = await response.json();
+        console.log("Response: ", resp2)
+    
+        // Check if the response status is 200 and handle the data
+        if (resp2.status === 200) {
+          const notificationsNow = resp2.notifications;
+          if (notificationsNow.length === 0) {
+            console.log("No notifications available.");
+            setnotificationsArray([])
+          } else {
+            // Example: Update state or handle notifications
+            console.log("Fetched Notifications: ", notifications);
+            setnotificationsArray(notificationsNow)
+            // Update notifications in your component's state if needed
+            // setNotifications(notifications);
+          }
+        } else {
+          setError(resp2.message)
+          console.error("Failed to fetch notifications:", resp2.message || "Unknown error.");
+        }
+      } catch (error) {
+        setError(error)
+        console.error("Error fetching notifications: ", error);
+      } finally{
+        setloading(false)
+      }
+    };
+    const main = async () => {
+      await getNotificationsNow2()
+    }
+
+    main()
+  }, [])
+
   
   let [fontsLoaded] = useFonts({
     Livvic_400Regular,
@@ -105,6 +181,65 @@ const NotificationScreen = ({ navigation }) => {
   if (!fontsLoaded) {
     return <AppLoading />;
   }
+
+  const getNotificationsNow = async () => {
+    setloading(true)
+    try {
+      // Retrieve token from AsyncStorage
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        console.error("Token not found.");
+        return;
+      }
+  
+      // Decode the token to extract user details
+      const decodedToken = jwt_decode(token);
+      const { id, email } = decodedToken;
+  
+      // Make a GET request to fetch notifications
+      const response = await fetch(`${BASE_URL}/notifications/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+  
+      if (!response) {
+        setError("Error occurred")
+        console.error("No response received from the server.");
+        return;
+      }
+  
+      // Parse the response JSON
+      const resp2 = await response.json();
+      console.log("Response: ", resp2)
+  
+      // Check if the response status is 200 and handle the data
+      if (resp2.status === 200) {
+        const notificationsNow = resp2.notifications;
+        if (notificationsNow.length === 0) {
+          console.log("No notifications available.");
+          setnotificationsArray([])
+        } else {
+          // Example: Update state or handle notifications
+          console.log("Fetched Notifications: ", notifications);
+          setnotificationsArray(notificationsNow)
+          // Update notifications in your component's state if needed
+          // setNotifications(notifications);
+        }
+      } else {
+        setError(resp2.message)
+        console.error("Failed to fetch notifications:", resp2.message || "Unknown error.");
+      }
+    } catch (error) {
+      setError(error)
+      console.error("Error fetching notifications: ", error);
+    } finally{
+      setloading(false)
+    }
+  };
+
+  
 
   const styles = getStyles(theme);
 
@@ -126,23 +261,35 @@ const NotificationScreen = ({ navigation }) => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notification</Text>
         </View>
+        {error !== "" && <Text style={{color: 'red', fontFamily: "Livvic_700Bold", fontSize: 17, textAlign: 'center', paddingVertical: 15}}>{error}</Text>}
+        {success !== "" && <Text style={{color: 'green', fontFamily: "Livvic_700Bold", fontSize: 17, textAlign: 'center', paddingVertical: 15}}>{success}</Text>}
 
         <ScrollView style={styles.notificationList}>
-          {notifications.map((notification) => (
+        {loading ? (
+      <ActivityIndicator size={20} color={theme === 'light' ? '#000' : '#fff'} />
+    ) : (
+      <>
+        {notificationsArray.length === 0 ? (
+          <Text style={styles.emptyText}>No notifications available.</Text>
+        ) : (
+          notificationsArray.map((notification) => (
             <TouchableOpacity
               key={notification.id}
               style={styles.notificationItem}
               onPress={() => handleNotificationPress(notification)}
             >
               <View style={styles.notificationIcon}>
-               <Icon name="bell"  color={theme === 'light' ? '#000' : '#fff'} size={24} />
+               <Icon name="bell"  color={theme === 'light' ? '#000' : '#fff'} size={24}/>
               </View>
               <View style={styles.notificationContent}>
-                <Text style={styles.notificationTitle}>{notification.title.length > 30 ? notification.title.slice(0,30) + '...' : notification.title}</Text>
-                <Text style={styles.timestamp}>{notification.timestamp}</Text>
+                <Text style={styles.notificationTitle}>{notification.notification_title.length > 30 ? notification.notification_title.slice(0,30) + '...' : notification.notification_title}</Text>
+                <Text style={styles.timestamp}>{notification.created_at.split(" ")[0]}-{notification.created_at.split(" ")[1]}</Text>
               </View>
             </TouchableOpacity>
-          ))}
+          ))
+        )}
+      </>
+    )}
         </ScrollView>
 
         <NotificationModal
@@ -192,10 +339,14 @@ const getStyles = (theme) => StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: theme === 'light' ? '#F5F5F5' : '#2C2C2C',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', // Centers content vertically
+    alignItems: 'center', // Centers content horizontally
     marginRight: 15,
+    alignSelf: 'center',
+    display: 'flex',
+    flexDirection: 'row'
   },
+  
   notificationContent: {
     flex: 1,
   },
