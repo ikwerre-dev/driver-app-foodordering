@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { View, StyleSheet, Text, Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -37,6 +37,7 @@ import DriverRegistration from "../screens/InfoScreen";
 import RideDetails from "../screens/RideDetails";
 import Performance from "../screens/Performance";
 import CarType from "../screens/CarType";
+import { useSocket } from "../context/SocketContext";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -44,6 +45,8 @@ const Stack = createStackNavigator();
 function TabNavigator() {
   const { theme } = useContext(ThemeContext);
   const { cart, removeFromCart } = useFoodContext();
+
+  const {socket} = useSocket()
   const insets = useSafeAreaInsets();;
   // console.log(insets)
   const isDarkTheme = theme === "dark";
@@ -53,6 +56,7 @@ function TabNavigator() {
     Livvic_400Regular,
     Livvic_700Bold,
   });
+
 
   if (!fontsLoaded) {
     return <AppLoading />;

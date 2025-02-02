@@ -1,1 +1,1 @@
-export const BASE_URL = "https://foodapp-backend-fefy.onrender.com"
+export const BASE_URL = "http://10.0.2.2:1245"
