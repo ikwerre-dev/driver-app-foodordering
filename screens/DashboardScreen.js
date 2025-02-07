@@ -14,6 +14,7 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  FlatList,
 } from "react-native";
 import jwt_decode from 'jwt-decode'
 import Icon from "react-native-vector-icons/Feather";
@@ -686,7 +687,7 @@ const HomeScreen = ({ navigation }) => {
     />}>
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>Available Balance</Text>
-            <Text style={styles.balanceAmount}>₦ {balance}</Text>
+            <Text style={styles.balanceAmount}>₦ {parseFloat(balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
             <TouchableOpacity style={styles.withdrawButton}>
               <Text style={styles.withdrawText}>Withdraw Money</Text>
             </TouchableOpacity>
@@ -805,36 +806,54 @@ const HomeScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.deliverySection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Incoming Delivery</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAll}>View All</Text>
-              </TouchableOpacity>
-            </View>
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>Incoming Delivery</Text>
+    <TouchableOpacity>
+      <Text style={styles.viewAll}>View All</Text>
+    </TouchableOpacity>
+  </View>
 
-            {loading ? (
-              <ActivityIndicator size="small" color="red" style={{paddingVertical: 15}}/>  // Show loading indicator
-            ) : incomingDeliveries.length > 0 ? (
-              incomingDeliveries.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.deliveryItem}
-                  onPress={() => navigation.navigate("Incoming", {data: item})}
-                >
-                  <View style={styles.packageIcon}>
-                    <Icon name="package" size={20} color="white" />
-                  </View>
-                  <View style={styles.deliveryInfo}>
-                    <Text style={styles.packageTitle}>Package #{item.item_id} to {item.shop_location.split(" ")[0]}</Text>
-                    <Text style={styles.packageStatus}>{item.status}</Text>
-                  </View>
-                  <Text style={styles.deliveryTime}>{formatDate(item.created_at)}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={{color: 'white', fontFamily: "Livvic_700Bold", fontSize: 16, textAlign: 'center', paddingVertical: 15}}>No incoming deliveries at the moment</Text>  // Message when no deliveries exist
-            )}
+  {loading ? (
+    <ActivityIndicator size="small" color="red" style={{ paddingVertical: 15 }} />
+  ) : incomingDeliveries.length > 0 ? (
+    <FlatList
+      data={incomingDeliveries}
+      keyExtractor={(item, index) => index.toString()}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={styles.deliveryItem}
+          onPress={() => navigation.navigate("Incoming", { data: item })}
+        >
+          <View style={styles.packageIcon}>
+            <Icon name="package" size={20} color="white" />
           </View>
+          <View style={styles.deliveryInfo}>
+            <Text style={styles.packageTitle}>
+              Package #{item.item_id} to {item.shop_location.split(" ")[0]}
+            </Text>
+            <Text style={styles.packageStatus}>{item.status}</Text>
+          </View>
+          <Text style={styles.deliveryTime}>{formatDate(item.created_at)}</Text>
+        </TouchableOpacity>
+      )}
+      contentContainerStyle={{ paddingBottom: 20, maxHeight: 150, flexGrow: 1 }} // Ensures scrolling space at the bottom
+      showsVerticalScrollIndicator={false} // Hides scroll indicator
+    />
+  ) : (
+    <Text
+      style={{
+        color: "white",
+        fontFamily: "Livvic_700Bold",
+        fontSize: 16,
+        textAlign: "center",
+        paddingVertical: 15,
+      }}
+    >
+      No incoming deliveries at the moment
+    </Text>
+  )}
+</View>
+
 
           <View style={styles.deliverySection}>
             <View style={styles.sectionHeader}>

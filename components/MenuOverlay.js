@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Icon from 'react-native-vector-icons/Feather';
 import { useFonts } from "expo-font";
+import jwt_decode from 'jwt-decode'
 import {
   Poppins_400Regular,
   Poppins_700Bold,
@@ -19,6 +20,7 @@ import AppLoading from '../components/Loader';
 import { AuthContext, ThemeContext } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { ScrollView } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
@@ -112,7 +114,27 @@ const getStyles = (theme) =>
 export default function MenuOverlay({ isOpen, onClose, translateX }) {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const navigation = useNavigation();
+  const [token, setToken] = useState(null)
+  const [fullName, setfullName] = useState("...")
+  const [email, setEmail] = useState("...")
   const { logout } = useContext(AuthContext);
+
+  useEffect(() => {
+    const main = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token")
+        const main = jwt_decode(token)
+        const {fullname, email} = main;
+        setfullName(fullname)
+        setEmail(email)
+        setToken(token)
+      } catch (error) {
+        console.log("Error: ", error)
+      }
+    }
+
+    main()
+  }, [])
 
   let [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -175,8 +197,8 @@ export default function MenuOverlay({ isOpen, onClose, translateX }) {
               style={styles.profileImage}
             />
           </View>
-          <Text style={styles.profileName}>Robinson Honour</Text>
-          <Text style={styles.profileEmail}>investorhonour@gmail.com</Text>
+          <Text style={styles.profileName}>{fullName}</Text>
+          <Text style={styles.profileEmail}>{email}</Text>
         </View>
 
         <ScrollView>

@@ -18,11 +18,12 @@ export const SocketProvider = ({ children }) => {
   // Orders state to hold the list of orders
   const [orders, setOrders] = useState([]);
   const [incomingDeliveries, setincomingDeliveries] = useState([])
+  const [currentDeliveries, setCurrentDeliveries] = useState([]); // New state for accepted orders
 
   useEffect(() => {
     // Initialize socket connection only if it's not already established
     if (!socketRef.current) {
-      socketRef.current = io(BASE_URL, {
+      socketRef.current = io("ws://192.168.98.47:1245", {
         transports: ['websocket'],
       });
     }
@@ -57,6 +58,26 @@ export const SocketProvider = ({ children }) => {
       console.log('Socket disconnected');
     });
 
+    socketRef.current.on("ignore_booking", (data) => {
+      const { order_id } = data;
+      console.log(`Order ${order_id} ignored and removed`);
+      setincomingDeliveries((prevOrders) => prevOrders.filter(order => order.order_id !== order_id));
+    });
+
+    // Remove accepted bookings
+    socketRef.current.on("booking_accepted", (data) => {
+      const { order_id } = data;
+      console.log(`Order ${order_id} accepted and moved to current deliveries`);
+
+      setincomingDeliveries((prevOrders) => {
+        const acceptedOrder = prevOrders.find(order => order.order_id === order_id);
+        if (acceptedOrder) {
+          setCurrentDeliveries((prevDeliveries) => [acceptedOrder, ...prevDeliveries]);
+        }
+        return prevOrders.filter(order => order.order_id !== order_id);
+      });
+    });
+
     // Cleanup on component unmount (e.g., when navigating away)
     return () => {
       if (socketRef.current) {
@@ -67,7 +88,7 @@ export const SocketProvider = ({ children }) => {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, orders, incomingDeliveries, setincomingDeliveries }}>
+    <SocketContext.Provider value={{ socket: socketRef.current, orders, incomingDeliveries, setincomingDeliveries, currentDeliveries }}>
       {children}
     </SocketContext.Provider>
   );
